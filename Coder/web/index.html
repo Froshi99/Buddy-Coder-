@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Coder</title>
+  <script>
+    (function () {
+      var forced = new URLSearchParams(location.search).get("theme");
+      var dark = forced ? forced === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <aside class="sidebar glass" id="sidebar" aria-label="Chats">
+    <div class="side-head">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5"/></svg></span>
+        Coder
+      </div>
+      <div class="side-actions">
+        <button class="icon-btn" id="memoryBtn" title="Gedächtnis" aria-label="Gedächtnis">
+          <svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="12" cy="18" r="2.4"/><path d="m8.3 6.6 7.4-.6M7.1 9.1l3.8 6.8M16.9 8.2l-3.8 7.7"/></svg>
+        </button>
+        <button class="icon-btn" id="agentsBtn" title="Agents" aria-label="Agents">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/><circle cx="17.2" cy="9.3" r="2.4"/><path d="M16 14.3a4.3 4.3 0 0 1 4.9 4.2"/></svg>
+        </button>
+        <button class="icon-btn" id="newChat" title="Neuer Chat (Strg+N)" aria-label="Neuer Chat">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" placeholder="Chats durchsuchen" autocomplete="off" spellcheck="false" aria-label="Chats durchsuchen">
+    </label>
+    <nav class="session-list" id="sessionList"></nav>
+    <button class="workspace-card" id="workspaceBtn" title="Workspace ändern">
+      <span class="ws-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5Z"/></svg></span>
+      <span class="ws-text">
+        <span class="ws-name" id="workspaceName">Workspace</span>
+        <span class="ws-path" id="workspacePath"></span>
+      </span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+    </button>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="capsule glass">
+        <button class="icon-btn" id="sidebarToggle" title="Seitenleiste (Strg+B)" aria-label="Seitenleiste ein- oder ausblenden">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+        </button>
+        <span class="chat-title" id="chatTitle">Neuer Chat</span>
+      </div>
+
+      <div class="topbar-center">
+        <button class="capsule glass model-capsule" id="modelBtn" title="Modell wählen (Strg+M)">
+          <span class="dot" id="modelDot"></span>
+          <span class="model-name" id="modelName">Modell wählen</span>
+          <span class="model-meta" id="modelMeta"></span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+        </button>
+      </div>
+
+      <div class="capsule glass">
+        <div class="segmented" id="modeSeg" role="radiogroup" aria-label="Berechtigungen">
+          <button data-mode="ask" role="radio" aria-label="Fragen" title="Fragen – vor Änderungen und Befehlen um Freigabe bitten">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5.5c0 4.3 3 8.2 7 9.5 4-1.3 7-5.2 7-9.5V6Z"/></svg><span>Fragen</span>
+          </button>
+          <button data-mode="auto-edit" role="radio" aria-label="Auto-Edit" title="Auto-Edit – Dateien frei bearbeiten, Befehle bestätigen">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Auto-Edit</span>
+          </button>
+          <button data-mode="plan" role="radio" aria-label="Planen" title="Planen – nur lesen und einen Plan vorlegen">
+            <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg><span>Planen</span>
+          </button>
+          <button data-mode="yolo" role="radio" aria-label="Autonom" title="Autonom – alles ohne Rückfrage">
+            <svg viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/></svg><span>Autonom</span>
+          </button>
+          <span class="seg-thumb" id="segThumb"></span>
+        </div>
+        <button class="icon-btn" id="settingsBtn" title="Einstellungen (Strg+,)" aria-label="Einstellungen">
+          <svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="scroll" id="scroll">
+      <div class="start" id="empty">
+        <div class="start-head">
+          <h1 id="startTitle">Coder</h1>
+          <p class="start-path" id="startPath"></p>
+          <div class="start-status" id="startStatus"><span class="dot"></span><span>Verbinde …</span></div>
+        </div>
+        <div class="start-section">
+          <span class="eyebrow">Häufige Aufgaben</span>
+          <div class="cmd-list" id="suggestions">
+            <button class="cmd-row" data-prompt="/review "><code>/review</code><span>Aktuelle Änderungen auf Fehler prüfen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            <button class="cmd-row" data-prompt="/test "><code>/test</code><span>Tests finden, ausführen und Fehlschläge erklären</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            <button class="cmd-row" data-prompt="/fix "><code>/fix</code><span>Einen Fehler beheben und die Korrektur prüfen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            <button class="cmd-row" data-prompt="/explain "><code>/explain</code><span>Code oder Zusammenhänge erklären</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            <button class="cmd-row" data-prompt="/init"><code>/init</code><span>CODER.md mit Aufbau, Befehlen und Konventionen anlegen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            <button class="cmd-row" data-prompt="/research "><code>/research</code><span>Im Internet recherchieren, mit Quellen</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+          </div>
+        </div>
+        <p class="start-keys"><span><kbd>Strg K</kbd>Befehlspalette</span><span><kbd>@</kbd>Agents</span><span><kbd>[[</kbd>Notizen</span><span><kbd>Strg V</kbd>Bild einfügen</span></p>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+    </section>
+
+    <footer class="dock" id="dock">
+      <div class="dock-inner">
+        <div class="todos glass" id="todos" hidden></div>
+        <div class="queue" id="queue" aria-label="Wartende Nachrichten" hidden></div>
+        <div class="approval" id="approval" role="alertdialog" aria-label="Freigabe" hidden></div>
+        <form class="island glass" id="composer">
+          <div class="suggest" id="suggest" role="listbox" aria-label="Vorschläge" hidden></div>
+          <div class="activity" id="activity" hidden>
+            <span class="activity-icon" id="activityIcon"><span class="spinner"></span></span>
+            <span class="activity-text" id="activityText">Denkt nach …</span>
+            <span class="activity-meta" id="activityMeta"></span>
+          </div>
+          <div class="attachments" id="attachments" hidden></div>
+          <textarea id="input" rows="1" placeholder="Beschreibe eine Aufgabe …" spellcheck="false" aria-label="Aufgabe"></textarea>
+          <div class="island-bar">
+            <button type="button" class="chip" id="wsChip" title="Workspace ändern">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5Z"/></svg>
+              <span id="wsChipName">Workspace</span>
+            </button>
+            <button type="button" class="chip" id="attachBtn" title="Bild anhängen – auch per Einfügen oder Hineinziehen">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 9"/></svg>
+              <span>Bild</span>
+            </button>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden>
+            <span class="ctx" id="ctxMeter" title="Kontextauslastung">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle class="ctx-track" cx="10" cy="10" r="8"/><circle class="ctx-bar" id="ctxBar" cx="10" cy="10" r="8"/></svg>
+              <span id="ctxText">Kontext frei</span>
+            </span>
+            <span class="spacer"></span>
+            <span class="hint" id="hwHint"></span>
+            <button type="submit" class="send" id="sendBtn" aria-label="Senden">
+              <svg class="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>
+              <svg class="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<div class="sheet-backdrop" id="modelSheet" hidden>
+  <div class="sheet sheet-wide" role="dialog" aria-modal="true" aria-labelledby="modelTitle">
+    <header class="sheet-head">
+      <div>
+        <h2 id="modelTitle">Modelle</h2>
+        <p>Geladen wird so, dass möglichst viel auf deiner GPU läuft.</p>
+      </div>
+      <button class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </header>
+    <div class="sheet-body">
+      <div class="stats" id="hwStats"></div>
+      <div class="list" id="modelList"></div>
+      <div class="tips" id="envTips"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="settingsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <header class="sheet-head">
+      <div><h2 id="settingsTitle">Einstellungen</h2><p>Gilt ab der nächsten Anfrage.</p></div>
+      <button class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </header>
+    <form class="sheet-body settings" id="settingsForm">
+      <span class="eyebrow">Projekt</span>
+      <div class="list">
+        <button type="button" class="row ws-row" id="settingsWorkspace">
+          <span class="ws-row-text">Workspace<small class="path" id="settingsWsPath"></small></span>
+          <span class="row-link">Ändern …</span>
+        </button>
+        <label class="row col"><span>Ollama-Adresse</span><input name="ollama_url" class="mono" spellcheck="false"></label>
+      </div>
+
+      <span class="eyebrow">Modell &amp; Speicher</span>
+      <div class="list">
+        <label class="row"><span>Kontext<small>Automatisch passt ihn an den VRAM an</small></span>
+          <select name="num_ctx">
+            <option value="0">Automatisch</option><option value="8192">8K</option><option value="16384">16K</option>
+            <option value="32768">32K</option><option value="65536">64K</option><option value="131072">128K</option>
+          </select></label>
+        <label class="row"><span>Auto-Kontext höchstens</span>
+          <select name="max_auto_ctx">
+            <option value="16384">16K</option><option value="32768">32K</option><option value="65536">64K</option><option value="131072">128K</option>
+          </select></label>
+        <label class="row"><span>KV-Cache des Servers</span>
+          <select name="kv_cache_type">
+            <option value="auto">Automatisch</option><option value="f16">f16</option><option value="q8_0">q8_0</option><option value="q4_0">q4_0</option>
+          </select></label>
+        <label class="row"><span>Im Speicher halten</span>
+          <select name="keep_alive">
+            <option value="5m">5 Minuten</option><option value="30m">30 Minuten</option><option value="2h">2 Stunden</option><option value="-1">Immer</option>
+          </select></label>
+        <label class="row"><span>Andere Modelle entladen<small>Mehr VRAM für das aktive Modell</small></span><input type="checkbox" class="switch" name="unload_others"></label>
+      </div>
+
+      <span class="eyebrow">Agent</span>
+      <div class="list">
+        <label class="row"><span>Sub-Agents nutzen<small>Coder gibt Teilaufgaben an Spezialisten ab</small></span><input type="checkbox" class="switch" name="subagents"></label>
+        <label class="row"><span>Claude-Code-Erweiterungen<small>Agents und Befehle aus ~/.claude übernehmen</small></span><input type="checkbox" class="switch" name="claude_extensions"></label>
+        <label class="row"><span>Gedächtnis nutzen<small>Notizen lesen und über Chats hinweg ergänzen</small></span><input type="checkbox" class="switch" name="memory"></label>
+        <label class="row"><span>Gedanken anzeigen<small>Nur bei Modellen mit Denkmodus</small></span><input type="checkbox" class="switch" name="think"></label>
+        <label class="row"><span>Temperatur</span><input name="temperature" type="number" min="0" max="2" step="0.05" placeholder="Modell-Standard"></label>
+        <label class="row"><span>Maximale Schritte</span><input name="max_steps" type="number" min="1" max="500"></label>
+        <label class="row"><span>Befehls-Timeout in Sekunden</span><input name="command_timeout" type="number" min="5" max="1800"></label>
+      </div>
+
+      <span class="eyebrow">Gedächtnis</span>
+      <div class="list">
+        <label class="row"><span>Passende Notizen automatisch holen<small>Findet Notizen nach Bedeutung, nicht nur nach Wörtern</small></span><input type="checkbox" class="switch" name="auto_recall"></label>
+        <label class="row"><span>Verlauf führen<small>Erledigte Aufgaben landen in der Notiz „Verlauf“</small></span><input type="checkbox" class="switch" name="journal"></label>
+      </div>
+
+      <span class="eyebrow">Kontrolle</span>
+      <div class="list">
+        <label class="row"><span>Ergebnisse prüfen lassen<small>Ein zweites Modell liest nach, testet und schickt den Agent weiter, bis es passt</small></span><input type="checkbox" class="switch" name="controller"></label>
+        <label class="row"><span>Kontroll-Modell</span><select name="controller_model" data-models="chat"><option value="">Automatisch</option></select></label>
+        <label class="row"><span>Nachbesserungen höchstens</span>
+          <select name="controller_rounds"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="5">5</option></select></label>
+        <label class="row"><span>Zwischendurch prüfen<small>Nur bei langen Aufgaben</small></span>
+          <select name="controller_interval"><option value="0">Nie</option><option value="5">Alle 5 Minuten</option><option value="10">Alle 10 Minuten</option><option value="20">Alle 20 Minuten</option></select></label>
+        <label class="row"><span>Watchdog<small>Hängt das Modell, wird es neu geladen</small></span>
+          <select name="watchdog"><option value="0">Aus</option><option value="90">Nach 90 Sekunden</option><option value="180">Nach 3 Minuten</option><option value="300">Nach 5 Minuten</option><option value="600">Nach 10 Minuten</option></select></label>
+      </div>
+
+      <span class="eyebrow">Bilder &amp; System</span>
+      <div class="list">
+        <label class="row"><span>Bildmodell<small>Für Modelle ohne eigene Bilderkennung</small></span><select name="vision_model" data-models="vision"><option value="">Automatisch</option></select></label>
+        <label class="row"><span>PC wach halten<small>Verhindert den Standby – der Bildschirm darf trotzdem ausgehen</small></span>
+          <select name="keep_awake" data-wide><option value="open">Solange Coder offen ist</option><option value="work">Während der Agent arbeitet</option><option value="off">Nie</option></select></label>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" data-close>Abbrechen</button>
+        <button type="submit" class="btn primary">Sichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="workspaceSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="wsTitle">
+    <header class="sheet-head">
+      <div><h2 id="wsTitle">Workspace</h2><p>Der Ordner, in dem Coder liest, schreibt und Befehle ausführt.</p></div>
+      <button class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </header>
+    <form class="sheet-body ws-sheet" id="wsForm" autocomplete="off">
+      <div class="ws-field">
+        <input id="wsPath" spellcheck="false" aria-label="Ordnerpfad" placeholder="C:\Projekte\meine-app">
+        <button type="button" class="btn" id="wsNative" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5Z"/></svg>
+          Durchsuchen …
+        </button>
+      </div>
+      <p class="ws-status" id="wsStatus" role="status"></p>
+      <div id="wsRecentBlock" hidden>
+        <span class="eyebrow">Zuletzt verwendet</span>
+        <div class="list" id="wsRecent"></div>
+      </div>
+      <span class="eyebrow">Ordner</span>
+      <div class="ws-places" id="wsPlaces"></div>
+      <div class="list ws-browser" id="wsBrowser"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" data-close>Abbrechen</button>
+        <button type="submit" class="btn primary" id="wsUse">Diesen Ordner verwenden</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="memorySheet" hidden>
+  <div class="sheet sheet-memory" role="dialog" aria-modal="true" aria-labelledby="memoryTitle">
+    <header class="sheet-head">
+      <div>
+        <h2 id="memoryTitle">Gedächtnis</h2>
+        <p>Verknüpfte Notizen, die Coder über Chats hinweg behält. Mit [[Titel]] holst du eine Notiz in deine Nachricht.</p>
+      </div>
+      <div class="sheet-head-actions">
+        <div class="view-switch" role="tablist" aria-label="Ansicht">
+          <button type="button" role="tab" data-view="notes" aria-selected="true">Notizen</button>
+          <button type="button" role="tab" data-view="graph" aria-selected="false">Graph</button>
+        </div>
+        <button class="btn" type="button" id="noteNew" aria-label="Neue Notiz">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Neue Notiz</span>
+        </button>
+        <button class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+    </header>
+    <div class="memory-body" id="memoryBody">
+      <aside class="memory-list">
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="noteSearch" placeholder="Notizen durchsuchen" autocomplete="off" spellcheck="false" aria-label="Notizen durchsuchen">
+        </label>
+        <div class="memory-tags" id="noteTags"></div>
+        <nav class="note-list" id="noteList"></nav>
+      </aside>
+      <section class="memory-note" id="noteView" aria-live="polite"></section>
+      <section class="memory-graph" id="noteGraph" hidden></section>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="agentsSheet" hidden>
+  <div class="sheet sheet-wide" role="dialog" aria-modal="true" aria-labelledby="agentsTitle">
+    <header class="sheet-head">
+      <div>
+        <h2 id="agentsTitle">Agents</h2>
+        <p>Spezialisten für Teilaufgaben. Coder gibt ihnen Arbeit ab – oder du sprichst sie mit @name direkt an.</p>
+      </div>
+      <div class="sheet-head-actions">
+        <button class="btn" type="button" id="agentNew" aria-label="Neuer Agent">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Neuer Agent</span>
+        </button>
+        <button class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+    </header>
+    <div class="sheet-body" id="agentsBody"></div>
+  </div>
+</div>
+
+<div class="toast glass" id="toast" role="status" hidden></div>
+<div class="palette-backdrop" id="palette" hidden>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Befehlspalette">
+    <label class="palette-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="paletteInput" placeholder="Aktion, Befehl, Agent, Notiz oder Chat" autocomplete="off" spellcheck="false" aria-controls="paletteList">
+      <kbd>Esc</kbd>
+    </label>
+    <div class="palette-list" id="paletteList" role="listbox"></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" hidden><img alt="Angehängtes Bild"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
